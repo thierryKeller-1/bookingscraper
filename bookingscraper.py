@@ -370,7 +370,7 @@ class BookingScraper(object):
                 else:
                     break
             else:
-                pass
+                break
 
 
         return data_container
