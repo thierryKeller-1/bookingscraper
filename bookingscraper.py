@@ -268,6 +268,7 @@ class BookingScraper(object):
         print("  ==> extracting data")
         data_container = []
 
+        page = 1
         while True:
             time.sleep(randint(1, 2))
             soupe = BeautifulSoup(self.driver.page_source.encode('utf-8').decode('utf-8'), 'html.parser')
@@ -277,7 +278,6 @@ class BookingScraper(object):
             except:
                 pass
             
-            page = 1
             
             if len(cards) > 0:
                 print(f"    ==> page {page}")
@@ -363,7 +363,7 @@ class BookingScraper(object):
                             self.driver.find_element(By.XPATH, "//button[@aria-label='Page suivante']").click()
                             WebDriverWait(self.driver, 1)
                         else:
-                            page = 0
+                            page = 1
                             break
                     except:
                         break
