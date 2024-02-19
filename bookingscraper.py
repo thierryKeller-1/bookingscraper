@@ -277,7 +277,10 @@ class BookingScraper(object):
             except:
                 pass
             
+            page = 1
+            
             if len(cards) > 0:
+                print(f"    ==> page {page}")
                 for card in cards:
                     try:
 
@@ -356,9 +359,11 @@ class BookingScraper(object):
                 if next_btn:
                     try:
                         if not self.driver.find_element(By.XPATH, "//button[@aria-label='Page suivante']").get_property('disabled'):
+                            page += 1
                             self.driver.find_element(By.XPATH, "//button[@aria-label='Page suivante']").click()
                             WebDriverWait(self.driver, 1)
                         else:
+                            page = 0
                             break
                     except:
                         break
@@ -366,6 +371,7 @@ class BookingScraper(object):
                     break
             else:
                 pass
+
 
         return data_container
     
