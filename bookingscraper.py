@@ -320,12 +320,9 @@ class BookingScraper(object):
 
                         typologie = ''
                         if card.find('div', {'data-testid':"recommended-units"}):
-                            typologie = card.find('div', {'data-testid':"recommended-units"}).find('h4', {'class':'abf093bdfe e8f7c070a7'}).text.strip().replace('\n', '') \
-                                if card.find('div', {'data-testid':'recommended-units'}).find('h4', {'class':'abf093bdfe e8f7c070a7'}) else ""
-                        else:
-                            typo_container = card.find('div', {'class':'b5ab47188a'})
-                            if typo_container:
-                                typologie = typo_container.find('h4', {'class':'b290e5dfa6 cf1a0708d9'}).text.strip()
+                            typologie = card.find('div', {'data-testid':"recommended-units"}).find('h4', {'class':'b290e5dfa6 cf1a0708d9'}).text.strip().replace('\n', '') \
+                                if card.find('div', {'data-testid':'recommended-units'}).find('h4', {'class':'b290e5dfa6 cf1a0708d9'}) else ""
+
                         date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
                         date_debut, date_fin = self.get_dates(self.driver.current_url)
                         data_container.append({
