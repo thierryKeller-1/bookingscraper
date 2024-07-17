@@ -525,7 +525,7 @@ class BookingScraper(object):
                 break
 
         soupe = BeautifulSoup(self.driver.page_source, 'lxml')
-        print(f"\t===>  card diplayed : {len(soupe.find_all('div', {'data-testid':"property-card"}))}")
+        print(f"""\t===>  card diplayed : {len(soupe.find_all('div', {'data-testid':"property-card"}))}""")
         print(f"""\t===> card extracted : {int(''.join(list(filter(str.isdigit, self.driver.find_element(By.XPATH, "//h1[@aria-live='assertive']").text))))}""")
 
     def is_valid_data(data:dict) -> bool:
