@@ -532,7 +532,7 @@ class BookingScraper(object):
             print(key)
             if key in ['n_offre', 'date_debut-jour']:
                 continue
-            if not data[key] or data['key'] is None or data[key] == '':
+            if not data[key] or data[key] is None or data[key] == '':
                 return False
             if key == 'prix_init' or key == 'prix_actuel':
                 try:
