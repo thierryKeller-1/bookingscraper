@@ -529,6 +529,7 @@ class BookingScraper(object):
 
     def is_valid_data(data:dict) -> bool:
         for key in data.keys():
+            print(key)
             if key in ['n_offre', 'date_debut-jour']:
                 continue
             if not data[key] or data['key'] is None or data[key] == '':
