@@ -554,57 +554,57 @@ class BookingScraper(object):
         if len(cards) > 0:
             print(f"  \t==> {len(cards)} cards found")
             for card in cards:
+                # try:
+                nom = card.find('div', {'data-testid':"title"}).text.replace('\n', '').replace(',', '-').replace('"', "'") \
+                    if card.find('div', {'data-testid':"title"}) else ''
+                localite = card.find('span', {'data-testid':"address"}).text.replace('\n', '') \
+                    if card.find('span', {'data-testid':"address"}) else ''
+
+                taxe_text = card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'data-testid':'taxes-and-charges'}).text[1:].replace(u'\xa0', u'').replace(' ', '')
+                taxe = int(''.join(list(filter(str.isdigit, taxe_text)))) if '€' in taxe_text else 0
+                prix_init = 0
+                prix_actual = 0
                 try:
-                    nom = card.find('div', {'data-testid':"title"}).text.replace('\n', '').replace(',', '-').replace('"', "'") \
-                        if card.find('div', {'data-testid':"title"}) else ''
-                    localite = card.find('span', {'data-testid':"address"}).text.replace('\n', '') \
-                        if card.find('span', {'data-testid':"address"}) else ''
-
-                    taxe_text = card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'data-testid':'taxes-and-charges'}).text[1:].replace(u'\xa0', u'').replace(' ', '')
-                    taxe = int(''.join(list(filter(str.isdigit, taxe_text)))) if '€' in taxe_text else 0
-                    prix_init = 0
-                    prix_actual = 0
-                    try:
-                        prix_actual = int(card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}).text[1:].replace(u'\xa0', u'')) \
-                            if card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}) else 0
-                        if prix_actual and prix_actual > 0:
-                            prix_actual += taxe
-                    except:
-                        print('prix actuel not found')
-                    try:
-                        prix_init = int(card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}).text[1:].replace(u'\xa0', u'')) \
-                            if card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}) else 0
-                        if prix_init and prix_init > 0:
-                            prix_init += taxe
-                    except:
-                        prix_init = prix_actual
-                        
-                    typologie = card.find('h4').text.replace(u'\xa0', ' ').replace('\n', '') 
-                    date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
-                    date_debut, date_fin = self.get_dates(self.driver.current_url)
-                    
-                    data = {
-                        'nom': nom,
-                        'n_offre': '',
-                        'date_debut': date_debut,
-                        'date_fin': date_fin,
-                        'localite': localite,
-                        'prix_actuel': prix_actual,
-                        'prix_init': prix_init,
-                        'typologie': typologie,
-                        'date_price': date_prix,
-                        'Nb semaines': datetime.strptime(date_debut, '%d/%m/%Y').isocalendar()[1],
-                        'date_debut-jour': '',
-                        'web-scraper-order': og.get_fullcode(self.code, self.order_index)
-                    }
-
-                    if self.is_valid_data(data):
-                        data_container.append(data)
-                    else:
-                        print(f'invalid data for {data}')
+                    prix_actual = int(card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}).text[1:].replace(u'\xa0', u'')) \
+                        if card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}) else 0
+                    if prix_actual and prix_actual > 0:
+                        prix_actual += taxe
                 except:
-                    print('failed to extract')
-                    pass
+                    print('prix actuel not found')
+                try:
+                    prix_init = int(card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}).text[1:].replace(u'\xa0', u'')) \
+                        if card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}) else 0
+                    if prix_init and prix_init > 0:
+                        prix_init += taxe
+                except:
+                    prix_init = prix_actual
+                    
+                typologie = card.find('h4').text.replace(u'\xa0', ' ').replace('\n', '') 
+                date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
+                date_debut, date_fin = self.get_dates(self.driver.current_url)
+                
+                data = {
+                    'nom': nom,
+                    'n_offre': '',
+                    'date_debut': date_debut,
+                    'date_fin': date_fin,
+                    'localite': localite,
+                    'prix_actuel': prix_actual,
+                    'prix_init': prix_init,
+                    'typologie': typologie,
+                    'date_price': date_prix,
+                    'Nb semaines': datetime.strptime(date_debut, '%d/%m/%Y').isocalendar()[1],
+                    'date_debut-jour': '',
+                    'web-scraper-order': og.get_fullcode(self.code, self.order_index)
+                }
+
+                if self.is_valid_data(data):
+                    data_container.append(data)
+                else:
+                    print(f'invalid data for {data}')
+                # except:
+                #     print('failed to extract')
+                #     pass
         return data_container
     
 
