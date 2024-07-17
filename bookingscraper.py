@@ -527,7 +527,7 @@ class BookingScraper(object):
         soupe = BeautifulSoup(self.driver.page_source, 'lxml')
         print(f"""\t===>  card diplayed : {len(soupe.find_all('div', {'data-testid':"property-card"}))}""")
 
-    def is_valid_data(data:dict) -> bool:
+    def is_valid_data(self, data:dict) -> bool:
         for key in data.keys():
             print(key)
             if key in ['n_offre', 'date_debut-jour']:
