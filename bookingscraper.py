@@ -287,7 +287,7 @@ class BookingScraper(object):
                         nom = card.find('div', {'data-testid':"title"}).text.replace('\n', '').replace(',', '-').replace('"', "'") \
                             if card.find('div', {'data-testid':"title"}) else ''
 
-                        localite = card.find('span', {'data-testid':"address"}).text.replace('\n', '').replace(',', '') \
+                        localite = card.find('span', {'data-testid':"address"}).text.replace('\n', '') \
                             if card.find('span', {'data-testid':"address"}) else ''
 
                         taxe_text = card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'data-testid':'taxes-and-charges'}).text[1:].replace(u'\xa0', u'').replace(' ', '')
@@ -295,11 +295,11 @@ class BookingScraper(object):
 
                         prix_actuel = 0
                         prix_init = 0 
-                        if card.find('span', {'data-testid':'price-and-discounted-price', 'class':'f6431b446c fbfd7c1165 e84eb96b1f'}):
-                            prix_actuel = card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price', 'class':'f6431b446c fbfd7c1165 e84eb96b1f'}).text[1:].replace(u'\xa0', u'').replace(',', '').replace(' ', '')
+                        if card.find('span', {'data-testid':'price-and-discounted-price'}):
+                            prix_actuel = card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}).text[1:].replace(u'\xa0', u'').replace(',', '').replace(' ', '')
                             prix_actuel = int(prix_actuel) + taxe
-                            prix_init = card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'class':'c73ff05531 e84eb96b1f', 'aria-hidden':'true'}).text[1:].replace(u'\xa0', u'').replace(' ', '').replace(',', '').replace(' ', '') \
-                                if card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'class':'c73ff05531 e84eb96b1f', 'aria-hidden':'true'}) else 0
+                            prix_init = card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}).text[1:].replace(u'\xa0', u'').repalce(' ', '').repalce(',', '')\
+                                if card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}) else 0
                             prix_init = int(prix_init) + taxe if int(prix_init) > 0 else prix_actuel
 
                         elif card.find('span', class_='fcab3ed991') and prix_actuel == 0:
@@ -320,8 +320,8 @@ class BookingScraper(object):
 
                         typologie = ''
                         if card.find('div', {'data-testid':"recommended-units"}):
-                            typologie = card.find('div', {'data-testid':"recommended-units"}).find('h4', {'class':'b290e5dfa6 cf1a0708d9'}).text.strip().replace('\n', '') \
-                                if card.find('div', {'data-testid':'recommended-units'}).find('h4', {'class':'b290e5dfa6 cf1a0708d9'}) else ""
+                            typologie = card.find('div', {'data-testid':"recommended-units"}).find('h4').text.strip().replace('\n', '').text.replace(u'\xa0', ' ') \
+                                if card.find('div', {'data-testid':'recommended-units'}).find('h4') else ""
 
                         date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
                         date_debut, date_fin = self.get_dates(self.driver.current_url)
