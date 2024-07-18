@@ -603,7 +603,6 @@ class BookingScraper(object):
                     pass
         return data_container
     
-
     def execute(self) -> None:
         global FILED_NAMES
         print("  ==> scraping start")
