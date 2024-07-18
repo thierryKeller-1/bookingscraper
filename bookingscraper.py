@@ -459,6 +459,7 @@ class BookingScraper(object):
         except:
             pass
         self.driver = webdriver.Chrome(self.chrome_options)
+        self.driver.maximize_window()
         self.driver_cycle = 0
 
     def close_modal(self) -> None:
@@ -503,15 +504,38 @@ class BookingScraper(object):
             except KeyError:
                 return f"{url_params['checkin_monthday'][0]}/{url_params['checkin_month'][0]}/{url_params['checkin_year'][0]}", f"{url_params['checkout_monthday'][0]}/{url_params['checkout_month'][0]}/{url_params['checkout_year'][0]}"
 
-    def load_page_content(self):
-        def scroll_page():
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(1)
-        scroll_page()
+    def get_cards(self) -> tuple:
+        card_count = 0
+        cards = []
+        try:
+            cards = self.driver.find_elements(By.XPATH, "//div[@data-testid='property-card']")
+            card_count = len(cards)
+            return cards, card_count 
+        except NoSuchElementException:
+            return cards, card_count 
 
+    def scroll_to_last_card(self) -> None:
+        cards, count = self.get_cards()
+        if cards:
+            self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', cards[-1])
+        time.sleep(3)
+
+    def scroll_down(self):
+        cards, current_card_count = self.get_cards()
+        if cards:
+            self.scroll_to_last_card()
+            while True:
+                cards, new_card_count = self.get_cards()
+                if new_card_count == current_card_count:
+                    break
+                if new_card_count > current_card_count:
+                    self.scroll_to_last_card()
+                current_card_count = new_card_count
+
+    def load_page_content(self):
+        self.scroll_down()
         while True:
             try:
-                scroll_page()
                 btn_vew_more = self.driver.find_element(By.XPATH, '//*[@id="bodyconstraint-inner"]/div[2]/div/div[2]/div[3]/div[2]/div[2]/div[3]/div/button')
                 if btn_vew_more:
                     self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', btn_vew_more)
