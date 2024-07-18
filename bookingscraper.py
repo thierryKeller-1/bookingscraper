@@ -543,8 +543,11 @@ class BookingScraper(object):
                 btn_vew_more = self.driver.find_element(By.XPATH, '//*[@id="bodyconstraint-inner"]/div[2]/div/div[2]/div[3]/div[2]/div[2]/div[3]/div/button')
                 if btn_vew_more:
                     self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', btn_vew_more)
-                    time.sleep(.5)
-                    btn_vew_more.click()
+                    time.sleep(1)
+                    try:
+                        btn_vew_more.click()
+                    except:
+                        pass
             except NoSuchElementException:
                 print("\t ===> page loaded")
                 break
