@@ -517,7 +517,11 @@ class BookingScraper(object):
     def scroll_to_last_card(self) -> None:
         cards, count = self.get_cards()
         if cards:
-            self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', cards[-1])
+            try:
+                self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', cards[-1])
+            except:
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
         time.sleep(3)
 
     def scroll_down(self):
