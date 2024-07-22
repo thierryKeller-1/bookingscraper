@@ -466,16 +466,19 @@ class BookingScraper(object):
         try:
             if self.driver.find_element(By.ID, 'onetrust-accept-btn-handler'):
                 self.driver.find_element(By.ID, 'onetrust-accept-btn-handler').click()
+                print("button1 clicked")
         except:
             pass
         try:
             if self.driver.find_element(By.XPATH, "//button[@aria-label='Ignorer les infos relatives à la connexion']"):
                 self.driver.find_element(By.XPATH, "//button[@aria-label='Ignorer les infos relatives à la connexion']").click()
+                print("button2 clicked")
         except:
             pass
         try:
             if self.driver.find_element(By.CSS_SELECTOR, "dba1b3bddf.e99c25fd33.aabf155f9a.f42ee7b31a.a86bcdb87f.b02ceec9d7"):
                 self.driver.find_element(By.CSS_SELECTOR, "dba1b3bddf.e99c25fd33.aabf155f9a.f42ee7b31a.a86bcdb87f.b02ceec9d7").click()
+                print("button3 clicked")
         except:
             pass
 
