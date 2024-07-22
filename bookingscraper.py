@@ -146,7 +146,7 @@ class BookingInitializer(object):
         self.save_destination(self.dest_url)
 
 
-class BookingScraper(object):
+class OldBookingScraper(object):
 
     def __init__(self, dest_name:str, name:str, week_date:str) -> None:
 
@@ -295,11 +295,11 @@ class BookingScraper(object):
 
                         prix_actuel = 0
                         prix_init = 0 
-                        if card.find('span', {'data-testid':'price-and-discounted-price', 'class':'f6431b446c fbfd7c1165 e84eb96b1f'}):
-                            prix_actuel = card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price', 'class':'f6431b446c fbfd7c1165 e84eb96b1f'}).text[1:].replace(u'\xa0', u'').replace(',', '').replace(' ', '')
+                        if card.find('span', {'data-testid':'price-and-discounted-price'}):
+                            prix_actuel = card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}).text[1:].replace(u'\xa0', u'').replace(',', '').replace(' ', '')
                             prix_actuel = int(prix_actuel) + taxe
-                            prix_init = card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'class':'c73ff05531 e84eb96b1f', 'aria-hidden':'true'}).text[1:].replace(u'\xa0', u'').replace(' ', '').replace(',', '').replace(' ', '') \
-                                if card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'class':'c73ff05531 e84eb96b1f', 'aria-hidden':'true'}) else 0
+                            prix_init = card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}).text[1:].replace(u'\xa0', u'').repalce(' ', '').repalce(',', '')\
+                                if card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}) else 0
                             prix_init = int(prix_init) + taxe if int(prix_init) > 0 else prix_actuel
 
                         elif card.find('span', class_='fcab3ed991') and prix_actuel == 0:
@@ -318,8 +318,11 @@ class BookingScraper(object):
                                 if card.find('div', {'data-testid':"availability-rate-information"}).find('span', class_='e729ed5ab6') else 0
                             prix_init = int(prix_init) + taxe if int(prix_init) > 0 else prix_actuel
 
-                        typologie = card.find('div', {'data-testid':"recommended-units"}).find('h4', {'class':'abf093bdfe e8f7c070a7'}).text.strip().replace('\n', '') \
-                            if card.find('div', {'data-testid':'recommended-units'}).find('h4', {'class':'abf093bdfe e8f7c070a7'}) else ""
+                        typologie = ''
+                        if card.find('div', {'data-testid':"recommended-units"}):
+                            typologie = card.find('div', {'data-testid':"recommended-units"}).find('h4').text.strip().replace('\n', '').replace(u'\xa0', ' ') \
+                                if card.find('div', {'data-testid':'recommended-units'}).find('h4') else ""
+
                         date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
                         date_debut, date_fin = self.get_dates(self.driver.current_url)
                         data_container.append({
@@ -392,6 +395,261 @@ class BookingScraper(object):
                 print(f"  ==> {len(data_container)} data extracted ")
                 gt.save_data(f"{OUTPUT_FOLDER_PATH}/{self.week_scrap}/{self.name}.csv", data_container, FILED_NAMES)
 
+                self.set_history()
+                self.driver_cycle += 1
+            print("  ==> scrap finished")
+        else:
+            print("  ==> destination empty! ")
+
+
+class BookingScraper(object):
+
+    "last update 17/07/2024"
+
+    def __init__(self, dest_name:str, name:str, week_date:str) -> None:
+
+        self.dest_name = dest_name
+        self.name = name
+
+        self.destinations = []
+        self.history = {}
+        self.week_scrap = datetime.strptime(week_date, "%d/%m/%Y").strftime("%d_%m_%Y")
+        self.exception_count = 0
+        self.code = og.create_code()
+        self.order_index = 1
+        self.driver_cycle = 0
+
+        self.chrome_options = webdriver.ChromeOptions()
+        self.chrome_options.add_argument('--ignore-certificate-errors')
+        self.chrome_options.add_argument('--disable-gpu')
+        self.chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
+        # self.chrome_options.add_argument('--headless')
+        self.chrome_options.add_argument('--incognito')
+        self.driver = webdriver.Chrome(options=self.chrome_options)
+        self.driver.maximize_window()
+
+    def create_log(self) -> None:
+        print("  ==> creating log")
+        log = { "last_index": 0, "week_scrap": self.week_scrap }
+        if not Path(f"{LOGS_FOLDER_PATH}/{self.week_scrap}").exists():
+            os.makedirs(f"{LOGS_FOLDER_PATH}/{self.week_scrap}")
+        gt.create_log_file(log_file_path=f"{LOGS_FOLDER_PATH}/{self.week_scrap}/{self.name}.json", log_value=log)
+
+    def load_destinations(self) -> None:
+        print("  ==> loading all destinations")
+        self.destinations = gt.load_json(f"{DESTINATION_PATH}/{self.week_scrap}/{self.dest_name}")
+
+        print(f"  ==> {len(self.destinations)} destination loaded")
+
+    def load_history(self) -> None:
+        print("  ==> loading history")
+        self.history = gt.load_json(f"{LOGS_FOLDER_PATH}/{self.week_scrap}/{self.name}.json")
+        self.week_scrap = self.history['week_scrap']
+
+    def set_history(self) -> None:
+        current_dest = self.history['last_index']
+        self.history['last_index'] = current_dest + 1
+        gt.save_history(f"{LOGS_FOLDER_PATH}/{self.week_scrap}/{self.name}.json", self.history)
+        print('  ==> set history')
+
+    def use_new_driver(self) -> None:
+        time.sleep(1)
+        try:
+            self.driver.quit()
+        except:
+            pass
+        self.driver = webdriver.Chrome(self.chrome_options)
+        self.driver.maximize_window()
+        self.driver_cycle = 0
+
+    def close_modal(self) -> None:
+        try:
+            if self.driver.find_element(By.ID, 'onetrust-accept-btn-handler'):
+                self.driver.find_element(By.ID, 'onetrust-accept-btn-handler').click()
+        except:
+            pass
+
+    def goto_page(self, url:str) -> None:
+        print(f"  ==> load page {url}")
+        if self.exception_count == 15:
+            gt.show_message("Timeout Exception Error", "max exception reached, please check it before continue", "warning")
+        if self.driver_cycle == 10:
+            self.driver.close()
+            # changeip.refresh_connection()
+            self.use_new_driver()
+        try:
+            self.driver.get(url)
+            WebDriverWait(self.driver, 1)
+            self.close_modal()
+            self.exception_count = 0
+        except TimeoutException as e:
+            gt.report_bug(f"{BUG_TRACK_PATH}/bug_{self.week_scrap}.txt", {"error": e, "bug_url":self.driver.current_url})
+            time.sleep(2)
+            self.exception_count += 1
+            self.use_new_driver()
+            self.goto_page(url)
+        
+    def create_output_file(self) -> None:
+        global FILED_NAMES
+        if not Path(f"{OUTPUT_FOLDER_PATH}/{self.week_scrap}").exists():
+            os.makedirs(f"{OUTPUT_FOLDER_PATH}/{self.week_scrap}")
+        gt.create_file(f"{OUTPUT_FOLDER_PATH}/{self.week_scrap}/{self.name}.csv", FILED_NAMES)
+
+    def get_dates(self, url:str) -> tuple:
+            """ function to get dates in url """
+            url_params = parse_qs(urlparse(url).query)
+            sep = '/'
+            try:
+                return sep.join(url_params['checkin'][0].split('-')[::-1]), sep.join(url_params['checkout'][0].split('-')[::-1])
+            except KeyError:
+                return f"{url_params['checkin_monthday'][0]}/{url_params['checkin_month'][0]}/{url_params['checkin_year'][0]}", f"{url_params['checkout_monthday'][0]}/{url_params['checkout_month'][0]}/{url_params['checkout_year'][0]}"
+
+    def get_cards(self) -> tuple:
+        card_count = 0
+        cards = []
+        try:
+            cards = self.driver.find_elements(By.XPATH, "//div[@data-testid='property-card']")
+            card_count = len(cards)
+            return cards, card_count 
+        except NoSuchElementException:
+            return cards, card_count 
+
+    def scroll_to_last_card(self) -> None:
+        cards, count = self.get_cards()
+        if cards:
+            try:
+                self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', cards[-1])
+            except:
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        time.sleep(3)
+
+    def scroll_down(self):
+        cards, current_card_count = self.get_cards()
+        if cards:
+            self.scroll_to_last_card()
+            while True:
+                cards, new_card_count = self.get_cards()
+                if new_card_count == current_card_count:
+                    break
+                if new_card_count > current_card_count:
+                    self.scroll_to_last_card()
+                current_card_count = new_card_count
+
+    def load_page_content(self):
+        self.scroll_down()
+        while True:
+            try:
+                btn_vew_more = self.driver.find_element(By.XPATH, '//*[@id="bodyconstraint-inner"]/div[2]/div/div[2]/div[3]/div[2]/div[2]/div[3]/div/button')
+                if btn_vew_more:
+                    self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', btn_vew_more)
+                    time.sleep(1)
+                    try:
+                        btn_vew_more.click()
+                    except:
+                        pass
+            except NoSuchElementException:
+                print("\t ===> page loaded")
+                break
+
+        soupe = BeautifulSoup(self.driver.page_source, 'lxml')
+        print(f"""\t===>  card diplayed : {len(soupe.find_all('div', {'data-testid':"property-card"}))}""")
+
+    def is_valid_data(self, data:dict) -> bool:
+        for key in data.keys():
+            if key in ['n_offre', 'date_debut-jour']:
+                continue
+            if not data[key] or data[key] is None or data[key] == '':
+                return False
+            if key == 'prix_init' or key == 'prix_actuel':
+                try:
+                    float(data[key])
+                except:
+                    print('prix init or actuel invalid')
+                    return False
+        return True
+
+    def extract_data(self) -> list:
+        print("  ==> extracting data")
+        data_container = []
+        soupe = BeautifulSoup(self.driver.page_source.encode('utf-8').decode('utf-8'), 'html.parser')
+        cards = []
+        try:
+            cards = soupe.find_all('div', {'data-testid':"property-card"})
+        except:
+            pass
+        if len(cards) > 0:
+            print(f"  \t==> {len(cards)} cards found")
+            for card in cards:
+                try:
+                    nom = card.find('div', {'data-testid':"title"}).text.replace('\n', '').replace(',', '-').replace('"', "'") \
+                        if card.find('div', {'data-testid':"title"}) else ''
+                    localite = card.find('span', {'data-testid':"address"}).text.replace('\n', '') \
+                        if card.find('span', {'data-testid':"address"}) else ''
+
+                    taxe_text = card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'data-testid':'taxes-and-charges'}).text[1:].replace(u'\xa0', u'').replace(' ', '')
+                    taxe = int(''.join(list(filter(str.isdigit, taxe_text)))) if '€' in taxe_text else 0
+                    prix_init = 0
+                    prix_actual = 0
+                    try:
+                        prix_actual = int(card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}).text[1:].replace(u'\xa0', u'')) \
+                            if card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}) else 0
+                        if prix_actual and prix_actual > 0:
+                            prix_actual += taxe
+                    except:
+                        print('prix actuel not found')
+                    try:
+                        prix_init = int(card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}).text[1:].replace(u'\xa0', u'')) \
+                            if card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}) else 0
+                        if prix_init and prix_init > 0:
+                            prix_init += taxe
+                    except:
+                        prix_init = prix_actual
+                        
+                    typologie = card.find('h4').text.replace(u'\xa0', ' ').replace('\n', '') 
+                    date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
+                    date_debut, date_fin = self.get_dates(self.driver.current_url)
+                    
+                    data = {
+                        'nom': nom,
+                        'n_offre': '',
+                        'date_debut': date_debut,
+                        'date_fin': date_fin,
+                        'localite': localite,
+                        'prix_actuel': prix_actual,
+                        'prix_init': prix_init,
+                        'typologie': typologie,
+                        'date_price': date_prix,
+                        'Nb semaines': datetime.strptime(date_debut, '%d/%m/%Y').isocalendar()[1],
+                        'date_debut-jour': '',
+                        'web-scraper-order': og.get_fullcode(self.code, self.order_index)
+                    }
+
+                    if self.is_valid_data(data):
+                        data_container.append(data)
+                    else:
+                        print(f'invalid data for {data}')
+                except:
+                    print('failed to extract')
+                    pass
+        return data_container
+    
+    def execute(self) -> None:
+        global FILED_NAMES
+        print("  ==> scraping start")
+        self.create_log()
+        self.create_output_file()
+        self.load_destinations()
+        self.load_history()
+        if self.destinations:
+            for x in range(self.history['last_index'], len(self.destinations)):
+                print(f"  ==> {self.history['last_index'] + 1} / {len(self.destinations)}")
+                self.goto_page(self.destinations[x])
+                self.load_page_content()
+                data_container = self.extract_data()
+                print(data_container)
+                print(f"  ==> {len(data_container)} data extracted ")
+                gt.save_data(f"{OUTPUT_FOLDER_PATH}/{self.week_scrap}/{self.name}.csv", data_container, FILED_NAMES)
                 self.set_history()
                 self.driver_cycle += 1
             print("  ==> scrap finished")
