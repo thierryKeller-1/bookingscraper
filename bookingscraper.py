@@ -515,6 +515,7 @@ class BookingScraper(object):
             return cards, card_count 
 
     def scroll_to_last_card(self) -> None:
+        self.close_modal()
         cards, count = self.get_cards()
         if cards:
             try:
@@ -525,6 +526,7 @@ class BookingScraper(object):
         time.sleep(3)
 
     def scroll_down(self):
+        self.close_modal()
         cards, current_card_count = self.get_cards()
         if cards:
             self.scroll_to_last_card()
