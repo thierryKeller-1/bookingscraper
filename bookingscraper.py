@@ -471,9 +471,9 @@ class BookingScraper(object):
 
     def goto_page(self, url:str) -> None:
         print(f"  ==> load page {url}")
-        if self.exception_count == 15:
+        if self.exception_count == 10:
             gt.show_message("Timeout Exception Error", "max exception reached, please check it before continue", "warning")
-        if self.driver_cycle == 10:
+        if self.driver_cycle == 5:
             self.driver.close()
             # changeip.refresh_connection()
             self.use_new_driver()
