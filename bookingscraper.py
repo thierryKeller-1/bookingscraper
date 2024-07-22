@@ -497,7 +497,7 @@ class BookingScraper(object):
             WebDriverWait(self.driver, 1)
             self.close_modal()
             self.exception_count = 0
-        except TimeoutException as e:
+        except Exception as e:
             gt.report_bug(f"{BUG_TRACK_PATH}/bug_{self.week_scrap}.txt", {"error": e, "bug_url":self.driver.current_url})
             time.sleep(2)
             self.exception_count += 1
