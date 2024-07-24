@@ -314,21 +314,6 @@ class BookingScraping(object):
             })
 
             self.order_index += 1 
-        
-        # data['nom'] = noms
-        # data['n_offre'] = n_offres
-        # data['date_debut'] = dates_debut
-        # data['date_fin'] = dates_fin
-        # # data['stars'] = stars
-        # data['localite'] = localites
-        # data['prix_actuel'] = prix_actuels
-        # # data['prix_actuel_taxe'] = prix_actuel_taxes
-        # data['prix_init'] = prix_inits
-        # data['typologie'] = typologies
-        # data['date_price'] = dates_prix
-        # data['Nb semaines'] = nb_semaines
-        # data['date_debut-jour'] = date_debut_jours
-        # data['web-scrapper-order'] = web_scrapper_orders
             
         print(data)
             
@@ -347,7 +332,6 @@ class BookingScraping(object):
                         'prix_actuel',
                         'typologie',
                         'n_offre',
-                        # 'stars',
                         'nom',
                         'localite',
                         'date_debut-jour',
@@ -385,7 +369,6 @@ class BookingScraping(object):
                         'prix_actuel',
                         'typologie',
                         'n_offre',
-                        # 'stars',
                         'nom',
                         'localite',
                         'date_debut-jour',
@@ -401,38 +384,6 @@ class BookingScraping(object):
                 file.write(f"{e}")
                 return False     
     
-    # def save_data(self, data:dict, filename:str) -> bool:
-    #     last_index = int(len(pd.read_excel(filename)) + 1)
-    #     df = pd.DataFrame({
-    #         'web-scrapper-order': data['web_scrapper_order'],
-    #         'date_price': data['date_prix'],
-    #         'date_debut': data['date_debut'],
-    #         'date_fin': data['date_fin'],
-    #         'prix_init': data['prix_init'],
-    #         'prix_actuel': data['prix_actuel'],
-    #         'prix_actuel_taxes': data['prix_actuel_taxe'],
-    #         'typologie': data['typologie'],
-    #         'n_offre': data['n_offres'],
-    #         'stars': data['stars'],
-    #         'nom': data['noms'],
-    #         'localite': data['localite'],
-    #         'date_debut-jour': data['date_debut_jour'],
-    #         'Nb semaines': data['nb_semain']
-    #     })
-
-    #     try:
-    #         with pd.ExcelWriter(filename, mode='a', engine='openpyxl', if_sheet_exists='overlay') as writer:
-    #             if last_index >= 1000:
-    #                 sheet_index = (last_index % 1000) + 1
-    #                 df.to_excel(writer, sheet_name=f'Sheet{sheet_index}', startrow=last_index, header=False, index=False)
-    #             else:
-    #                 df.to_excel(writer, sheet_name=f'Sheet1', startrow=last_index, header=False, index=False)
-    #             return True
-            
-    #     except Exception as e:
-    #         with open('SaveDataError.txt', 'a') as file:
-    #             file.write(f"{e}\n{datetime.now().isoformat()}")
-    #             return False
     
     def switch_driver(self) -> None:
         """ function to make switch driver """

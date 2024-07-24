@@ -437,7 +437,7 @@ class BookingScraper(object):
 
     def load_destinations(self) -> None:
         print("  ==> loading all destinations")
-        self.destinations = gt.load_json(f"{DESTINATION_PATH}/{self.week_scrap}/{self.dest_name}")
+        self.destinations = gt.load_json(f"{DESTINATION_PATH}/{self.week_scrap}/{self.dest_name}.json")
 
         print(f"  ==> {len(self.destinations)} destination loaded")
 
@@ -455,6 +455,7 @@ class BookingScraper(object):
     def use_new_driver(self) -> None:
         time.sleep(1)
         try:
+            self.driver.close()
             self.driver.quit()
         except:
             pass
@@ -488,7 +489,7 @@ class BookingScraper(object):
         print(f"  ==> load page {url}")
         if self.exception_count == 10:
             gt.show_message("Timeout Exception Error", "max exception reached, please check it before continue", "warning")
-        if self.driver_cycle == 5:
+        if self.driver_cycle == 15:
             self.driver.close()
             # changeip.refresh_connection()
             self.use_new_driver()
@@ -557,7 +558,7 @@ class BookingScraper(object):
         self.scroll_down()
         while True:
             try:
-                btn_vew_more = self.driver.find_element(By.XPATH, '//*[@id="bodyconstraint-inner"]/div[2]/div/div[2]/div[3]/div[2]/div[2]/div[3]/div/button')
+                btn_vew_more = self.driver.find_element(By.XPATH, '//span[contains(text(), "Afficher plus de résultats") or contains(text(), "Load more results")]')
                 if btn_vew_more:
                     self.driver.execute_script('arguments[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })', btn_vew_more)
                     time.sleep(1)
