@@ -65,7 +65,7 @@ if args.action and args.action == 'start':
         )
         b.execute()
 elif args.action and args.action == 'init':
-    miss_command = check_arguments(args, ['-d', '-f', '-s', '-e'])
+    miss_command = check_arguments(args, ['-d', '-f', '-s', '-e', '-b'])
     if len(miss_command):
         raise Exception(f"Argument(s) manquant(s): {', '.join(miss_command)}")
     else:

@@ -1,4 +1,4 @@
-from tkinter import messagebox
+# from tkinter import messagebox
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
@@ -10,11 +10,11 @@ def show_message(message_title:str, message_body:str,status:str) -> None:
     print(f"  ==> {message_body}")
     match status:
         case 'error':
-            messagebox.showerror(message_title, message_body)
+            print(message_title, message_body)
         case 'info':
-            messagebox.showerror(message_title, message_body)
+            print(message_title, message_body)
         case 'warning':
-            messagebox.showwarning(message_title, message_body)
+            print(message_title, message_body)
 
 def report_bug(bug_file_path:str, bug:dict) -> None:
     if not Path(bug_file_path).exists():

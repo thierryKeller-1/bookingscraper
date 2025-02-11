@@ -60,7 +60,7 @@ class BookingInitializer(object):
         print(" ==> reading station file")
         time.sleep(1)
         # try:
-        station_url = json.load(open(f"{STATION_FOLDER_PATH}/{self.station_name}"))
+        station_url = json.load(open(f"{STATION_FOLDER_PATH}/{self.station_name}.json"))
         return station_url
         # except FileNotFoundError:
         #     show_message("File not found", "File not found or station file name incorrect", "error")
@@ -70,14 +70,14 @@ class BookingInitializer(object):
         """ normalize url parameters as needed for data scraping format """
         print(url)
         url_params = parse_qs(urlparse(url).query)
-        if "lang" not in url_params:
-            url += f"&lang=fr"
         if "checkin" not in url_params:
             url += f"&checkin={start}"
         if "checkout" not in url_params:
             url += f"&checkout={end}"
         if "selected_currency" not in url_params:
             url += "&selected_currency=EUR"
+        if "lang" not in url_params:
+            url += f"&lang=fr"
         return url
 
     def generate_url(self, stations_url:list) -> list:
@@ -605,22 +605,28 @@ class BookingScraper(object):
                     localite = card.find('span', {'data-testid':"address"}).text.replace('\n', '') \
                         if card.find('span', {'data-testid':"address"}) else ''
 
-                    taxe_text = card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'data-testid':'taxes-and-charges'}).text[1:].replace(u'\xa0', u'').replace(' ', '')
-                    taxe = int(''.join(list(filter(str.isdigit, taxe_text)))) if '€' in taxe_text else 0
+                    taxe_text = card.find('div', {'data-testid':"availability-rate-wrapper"}).find('div', {'data-testid':'taxes-and-charges'}).text.replace('€', '').replace('QAR', '').replace(u'\xa0', u'').replace(' ', '')
+                    taxe = 0
+                    try:
+                        taxe = float(taxe_text.split(':')[-1])
+                    except:
+                        pass
                     prix_init = 0
                     prix_actual = 0
                     try:
-                        prix_actual = int(card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}).text[1:].replace(u'\xa0', u'')) \
-                            if card.find('div', {'data-testid':"availability-rate-information"}).find('span', {'data-testid':'price-and-discounted-price'}) else 0
-                        if prix_actual and prix_actual > 0:
-                            prix_actual += taxe
+                        prix_actual = card.find('div', {'data-testid':"availability-rate-wrapper"}).find('span', {'data-testid':'price-and-discounted-price'}).text.replace('€', '').replace('QAR', '').replace(u'\xa0', u'').replace(' ', '') \
+                        if card.find('div', {'data-testid':"availability-rate-wrapper"}).find('span', {'data-testid':'price-and-discounted-price'}) else 0
+                        if prix_actual and float(prix_actual) > 0:
+                            prix_actual = float(prix_actual)
+                        prix_actual += taxe
                     except:
                         print('prix actuel not found')
                     try:
-                        prix_init = int(card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}).text[1:].replace(u'\xa0', u'')) \
-                            if card.find('div', {'data-testid':"availability-rate-information"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}) else 0
-                        if prix_init and prix_init > 0:
-                            prix_init += taxe
+                        prix_init = card.find('div', {'data-testid':"availability-rate-wrapper"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}).text.replace('€', '').replace('QAR', '').replace(u'\xa0', u'').replace(' ', '') \
+                        if card.find('div', {'data-testid':"availability-rate-wrapper"}).find('div', {'tabindex':'0'}).find('span', {'class':'f018fa3636 d9315e4fb0'}) else 0
+                        if prix_init and float(prix_init) > 0:
+                            prix_init = float(prix_init)
+                        prix_init += taxe
                     except:
                         prix_init = prix_actual
                         
