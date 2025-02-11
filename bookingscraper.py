@@ -210,6 +210,12 @@ class OldBookingScraper(object):
                 self.driver.find_element(By.ID, 'onetrust-accept-btn-handler').click()
         except:
             pass
+        try:
+            if self.driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Dismiss sign in information."]'):
+                self.driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Dismiss sign in information."]').click()
+                print("Popup de connexion fermé")
+        except:
+            pass
 
     def goto_page(self, url:str) -> None:
         print(f"  ==> load page {url}")
