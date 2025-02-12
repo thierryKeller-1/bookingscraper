@@ -360,7 +360,8 @@ class OldBookingScraper(object):
                             'date_debut-jour': '',
                             'web-scraper-order': og.get_fullcode(self.code, self.order_index)
                         })
-                    except AttributeError:
+                    except Exception as e:
+                        print(e)
                         pass
 
                     self.order_index += 1 
