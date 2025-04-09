@@ -43,6 +43,33 @@ FILED_NAMES = [
                 'Nb semaines'
             ] 
 
+QUERY_ORDER = [
+    "aid",
+    "label",
+    "sid",
+    "age",
+    "checkin",
+    "checkout",
+    "dest_id",
+    "dest_type",
+    "dist",
+    "group_children",
+    "hapos",
+    "hpos",
+    "no_rooms",
+    "req_adults",
+    "req_age",
+    "req_children",
+    "room1",
+    "sb_price_type",
+    "soh",
+    "sr_order",
+    "srepoch",
+    "srpvid",
+    "type",
+    "ucfs"
+]
+
 class BookingInitializer(object):
 
     def __init__(self, station_name:str, start_date:str, end_date:str, freq:int, dest_name:str) -> None:
@@ -66,6 +93,12 @@ class BookingInitializer(object):
         #     show_message("File not found", "File not found or station file name incorrect", "error")
         #     sys.exit()
 
+    def get_page_type(self, url:str) -> str:
+        if '/hotel/' in url:
+            return 'hotel'
+        else:
+            return 'list'
+
     def normalize_url_params(self, url:str, start:str, end:str) -> str:
         """ normalize url parameters as needed for data scraping format """
         print(url)
@@ -82,6 +115,7 @@ class BookingInitializer(object):
 
     def generate_url(self, stations_url:list) -> list:
         """generate dynamic urls for any station between interval of given dates {start_date and end_date}"""
+        global QUERY_ORDER
         time.sleep(1)
         correct_dest_url = []
         if self.freq in [1, 3, 7]:
@@ -91,8 +125,23 @@ class BookingInitializer(object):
 
             for _ in range(date_space):
                 for station_url in stations_url:
+                    page_type = self.get_page_type(station_url)
                     url = self.normalize_url_params(station_url, checkin.strftime("%Y-%m-%d"), checkout.strftime("%Y-%m-%d"))
+                    if page_type == 'hotel':
+                        base_url = url.split('?')[0]
+                        params = url.split('?')[-1]
+                        formated_ordered_params = ""
+                        query_url = parse_qs(params)
+                        for query in QUERY_ORDER:
+                            if bool(query_url.get(query)):
+                                formated_ordered_params += f"{query}={query_url.get(query, '')[0]}&"
+                        parms_keys = list(query_url.keys())
+                        new_params = [i for i in parms_keys if i not in QUERY_ORDER]
+                        for query in new_params:
+                            formated_ordered_params += f"{query}={query_url.get(query, '')[0]}&"
+                        url = f"{base_url}?{formated_ordered_params}"[:-1]
                     correct_dest_url.append(url)
+
                 checkin += timedelta(days=1)
                 checkout += timedelta(days=1)
 
@@ -133,7 +182,6 @@ class BookingInitializer(object):
         number_of_dest = len(json.load(open(dest_name)))
 
         print(f" ==> well done, {number_of_dest} destinations saved!")
-
 
     def execute(self) -> None:
         """ running Booking initalizer to setup booking scraping """
@@ -430,7 +478,7 @@ class BookingScraper(object):
         self.chrome_options.add_argument('--ignore-certificate-errors')
         self.chrome_options.add_argument('--disable-gpu')
         self.chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
-        # self.chrome_options.add_argument('--headless')
+        # self.chrome_options.add_argument('--headless')  
         self.chrome_options.add_argument('--incognito')
         self.driver = webdriver.Chrome(options=self.chrome_options)
         self.driver.maximize_window()
@@ -594,7 +642,15 @@ class BookingScraper(object):
                     return False
         return True
 
-    def extract_data(self) -> list:
+    def get_page_type(self) -> str:
+        soupe = BeautifulSoup(self.driver.page_source, 'lxml')
+        if soupe.find('div', {'class':'d4924c9e74', 'role':'list'}):
+            return 'list'
+        if soupe.find('div', {'id':'hotelTmpl'}):
+            return 'detail'
+        return 'undefined'
+
+    def extract_data_list(self) -> list:
         print("  ==> extracting data")
         data_container = []
         soupe = BeautifulSoup(self.driver.page_source.encode('utf-8').decode('utf-8'), 'html.parser')
@@ -665,6 +721,71 @@ class BookingScraper(object):
                     pass
         return data_container
     
+    def extract_data_detail(self) -> list:
+
+        page = BeautifulSoup(self.driver.page_source.encode('utf-8').decode('utf-8'), 'html.parser')
+        data_container = []
+
+        try:
+            availability = page.find('p', {'class':'bui-alert__text'}).text.strip()
+            if 'sélectionner des dates' in availability:
+                return []
+        except Exception as e:
+            print(f"==> data available")
+
+        nom = page.find('h2', {'class':'d2fee87262 pp-header__title'}).text
+        localite = page.find('div', {'class':'a53cbfa6de f17adf7576'})
+        localite_other_content = localite.find('div', {'class':'ac52cd96ed'}).text
+        localite = localite.text.split(localite_other_content)[0].strip().replace(',', ' -')
+        container = page.find('table', {'id':'hprt-table'})
+
+        if bool(container):
+            t_body = container.find('tbody')
+            rows = t_body.find_all('tr')
+            typologie = ""
+            for row in rows:
+                try:
+                    if row.find('th'):
+                        typologie = row.find('th').find('span', {'class':'hprt-roomtype-icon-link'}).text.replace('\n', '').split('(')[0].strip()
+                    taxe = row.find('td', {'class':'hp-price-left-align hprt-table-cell hprt-table-cell-price'})
+                    taxe_text = taxe.find('div', class_='prd-taxes-and-fees-under-price').text
+                    taxe_value = 0
+                    try:
+                        taxe_value =  int(''.join(filter(str.isdigit, taxe_text)))
+                    except:
+                        pass    
+                    taxe_value = 0 if 'compri' not in taxe_text else taxe_value
+
+                    date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
+                    date_debut, date_fin = self.get_dates(self.driver.current_url)
+                    prix_actual = row["data-hotel-rounded-price"] + taxe_value
+                    prix_init = prix_actual
+                    try:
+                        prix_init = row.find('div', {'class':'bui-f-color-destructive js-strikethrough-price prco-inline-block-maker-helper bui-price-display__original'})['data-strikethrough-value'] + taxe_value
+                    except:
+                        pass
+                    data = {
+                        'nom': nom,
+                            'n_offre': '',
+                            'date_debut': date_debut,
+                            'date_fin': date_fin,
+                            'localite': localite,
+                            'prix_actuel': prix_actual,
+                            'prix_init': prix_init,
+                            'typologie': typologie,
+                            'date_price': date_prix,
+                            'Nb semaines': datetime.strptime(date_debut, '%d/%m/%Y').isocalendar()[1],
+                            'date_debut-jour': '',
+                            'web-scraper-order': og.get_fullcode(self.code, self.order_index)
+                    }
+                    if self.is_valid_data(data):
+                        data_container.append(data)
+                    else:
+                        print(f'invalid data for {data}')
+                except Exception as e:
+                    print(f"Error ==> {e}")
+        return data_container
+
     def execute(self) -> None:
         global FILED_NAMES
         print("  ==> scraping start")
@@ -676,9 +797,22 @@ class BookingScraper(object):
             for x in range(self.history['last_index'], len(self.destinations)):
                 print(f"  ==> {self.history['last_index'] + 1} / {len(self.destinations)}")
                 self.goto_page(self.destinations[x])
-                self.load_page_content()
-                data_container = self.extract_data()
-                print(data_container)
+                page_type = self.get_page_type()
+                data_container = []
+                match page_type:
+                    case 'list':
+                        self.load_page_content()
+                        try:
+                            data_container = self.extract_data_list()
+                        except Exception as e:
+                            print("failed to extract page list")
+                            print(f"Eror => {e}")
+                    case 'detail':
+                        try:
+                            data_container = self.extract_data_detail()
+                        except Exception as e:
+                            print("failed to extract page detail")
+                            print(f"Eror => {e}")
                 print(f"  ==> {len(data_container)} data extracted ")
                 gt.save_data(f"{OUTPUT_FOLDER_PATH}/{self.week_scrap}/{self.name}.csv", data_container, FILED_NAMES)
                 self.set_history()
