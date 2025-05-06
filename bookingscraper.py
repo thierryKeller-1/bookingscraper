@@ -728,28 +728,42 @@ class BookingScraper(object):
 
         try:
             availability = page.find('p', {'class':'bui-alert__text'}).text.strip()
-            if 'sélectionner des dates' in availability:
+            if 'sélectionner des dates' in availability or "Indica las fechas para" in availability:
                 return []
         except Exception as e:
             print(f"==> data available")
 
-        nom = page.find('h2', {'class':'d2fee87262 pp-header__title'}).text
-        localite = page.find('div', {'class':'a53cbfa6de f17adf7576'})
-        localite_other_content = localite.find('div', {'class':'ac52cd96ed'}).text
-        localite = localite.text.split(localite_other_content)[0].strip().replace(',', ' -')
+        # nom = page.find('h2', {'class':'d2fee87262 pp-header__title'}).text
+        nom = page.find('div', {'id':'hp_hotel_name'}).find('h2').text
+        # localite = page.find('div', {'class':'a53cbfa6de f17adf7576'})
+        # localite_other_content = localite.find('div', {'class':'ac52cd96ed'}).text
+        # localite = localite.text.split(localite_other_content)[0].strip().replace(',', ' -')
+
+        localite_base = page.find('div', {'class':'b99b6ef58f cb4b7a25d9'}).text
+        extra_localite = page.find('div', {'class':'b99b6ef58f cb4b7a25d9'}).find('div').text
+        localite = localite_base.replace(extra_localite, '').replace(',', ' -')
+
         container = page.find('table', {'id':'hprt-table'})
 
         if bool(container):
             t_body = container.find('tbody')
             rows = t_body.find_all('tr')
+            print(f"{len(rows)} data found")
             typologie = ""
             for row in rows:
                 try:
-                    if row.find('th'):
-                        typologie = row.find('th').find('span', {'class':'hprt-roomtype-icon-link'}).text.replace('\n', '').split('(')[0].strip()
-                    taxe = row.find('td', {'class':'hp-price-left-align hprt-table-cell hprt-table-cell-price'})
-                    taxe_text = taxe.find('div', class_='prd-taxes-and-fees-under-price').text
+                    if row.find('span', {'class':'hprt-roomtype-icon-link'}):
+                        typologie = row.find('span', {'class':'hprt-roomtype-icon-link'}).text.replace('\n', '').split('(')[0].strip()
+                        print(f"typologie = {typologie}")
                     taxe_value = 0
+                    taxe_text = ""
+                    try:
+                        taxe = row.find('td', {'class':'hp-price-left-align hprt-table-cell hprt-table-cell-price'})
+                        taxe_text = taxe.find('div', class_='prd-taxes-and-fees-under-price').text
+                        taxe_value = 0
+                    except:
+                        print('taxe not found')
+                        pass
                     try:
                         taxe_value =  int(''.join(filter(str.isdigit, taxe_text)))
                     except:
@@ -758,26 +772,29 @@ class BookingScraper(object):
 
                     date_prix = (datetime.now() + timedelta(days=-datetime.now().weekday())).strftime('%d/%m/%Y')
                     date_debut, date_fin = self.get_dates(self.driver.current_url)
-                    prix_actual = row["data-hotel-rounded-price"] + taxe_value
+                    prix_actual = int(row["data-hotel-rounded-price"]) + taxe_value
+                    print(f"prix actual {prix_actual}")
                     prix_init = prix_actual
                     try:
-                        prix_init = row.find('div', {'class':'bui-f-color-destructive js-strikethrough-price prco-inline-block-maker-helper bui-price-display__original'})['data-strikethrough-value'] + taxe_value
+                        prix_init = int(row.find('div', {'class':'bui-f-color-destructive js-strikethrough-price prco-inline-block-maker-helper bui-price-display__original'})['data-strikethrough-value']) + taxe_value
+                        print(f"prix init = {prix_init}")
                     except:
                         pass
                     data = {
                         'nom': nom,
-                            'n_offre': '',
-                            'date_debut': date_debut,
-                            'date_fin': date_fin,
-                            'localite': localite,
-                            'prix_actuel': prix_actual,
-                            'prix_init': prix_init,
-                            'typologie': typologie,
-                            'date_price': date_prix,
-                            'Nb semaines': datetime.strptime(date_debut, '%d/%m/%Y').isocalendar()[1],
-                            'date_debut-jour': '',
-                            'web-scraper-order': og.get_fullcode(self.code, self.order_index)
+                        'n_offre': '',
+                        'date_debut': date_debut,
+                        'date_fin': date_fin,
+                        'localite': localite,
+                        'prix_actuel': prix_actual,
+                        'prix_init': prix_init,
+                        'typologie': typologie,
+                        'date_price': date_prix,
+                        'Nb semaines': datetime.strptime(date_debut, '%d/%m/%Y').isocalendar()[1],
+                        'date_debut-jour': '',
+                        'web-scraper-order': og.get_fullcode(self.code, self.order_index)
                     }
+                    print(data)
                     if self.is_valid_data(data):
                         data_container.append(data)
                     else:
